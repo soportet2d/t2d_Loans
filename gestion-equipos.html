@@ -407,7 +407,7 @@
   // CONFIGURACIÓN — pega aquí la URL de tu Web App de Apps Script
   // (termina en /exec). Debe ser la MISMA que en formulario-alumno.html.
   // -----------------------------------------------------------------
-  const API_URL = "https://script.google.com/macros/s/AKfycbxxF1T9xItaYLIjuBNzU_ODksfTILY_R32pWOIhlpL7aug0pFDN9hMO1Ted-l9ya0P_mg/exec";
+  const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
   const POLL_MS = 6000;
 
   const configured = API_URL && API_URL.indexOf("https://script.google.com/") === 0;
@@ -605,7 +605,11 @@
     if (!confirm('¿Liberar el equipo ' + codigo + '? Solo hazlo si ya está físicamente de vuelta en la sala.')) return;
     const data = await apiPost({ action: "liberarEquipo", codigo: codigo });
     if (!data.ok) { toast(data.error || "No se pudo liberar el equipo.", "err"); return; }
-    toast(codigo + " liberado — vuelve a estar disponible.", "ok");
+    if (data.correoEnviado === false) {
+      toast(codigo + " liberado, pero el correo de devolución no se pudo enviar" + (data.correoError ? " (" + data.correoError + ")" : "") + ".", "err");
+    } else {
+      toast(codigo + " liberado — vuelve a estar disponible.", "ok");
+    }
     cargarSnapshot(true);
   }
 
@@ -643,7 +647,11 @@
       const data = await apiPost({ action: "atenderSolicitud", solicitudId: atenderId, codigo: codigo });
       if (!data.ok) { errBox.innerHTML = errorBanner(data.error || "No se pudo completar la entrega."); return; }
       modalAtender.classList.remove("open");
-      toast(codigo + " asignado correctamente.", "ok");
+      if (data.correoEnviado === false) {
+        toast(codigo + " asignado, pero el correo al alumno no se pudo enviar" + (data.correoError ? " (" + data.correoError + ")" : "") + ".", "err");
+      } else {
+        toast(codigo + " asignado correctamente.", "ok");
+      }
       cargarSnapshot(true);
     } catch (e) {
       errBox.innerHTML = errorBanner("No se pudo conectar con el servidor.");
@@ -733,7 +741,11 @@
     try {
       const data = await apiPost({ action: "asignarPresencial", codigo: asg.equipo.id, nombre: asg.alumno.nombre, correo: asg.alumno.correo, facultad: asg.alumno.facultad });
       if (!data.ok) { toast(data.error || "No se pudo asignar el equipo.", "err"); return; }
-      toast(asg.equipo.id + " asignado a " + asg.alumno.nombre + ".", "ok");
+      if (data.correoEnviado === false) {
+        toast(asg.equipo.id + " asignado, pero el correo al alumno no se pudo enviar" + (data.correoError ? " (" + data.correoError + ")" : "") + ".", "err");
+      } else {
+        toast(asg.equipo.id + " asignado a " + asg.alumno.nombre + ".", "ok");
+      }
       asg.step = 1; asg.equipo = null; asg.alumno = null;
       renderAsignar();
       cargarSnapshot(true);
@@ -779,7 +791,11 @@
         try {
           const data = await apiPost({ action: "liberarEquipo", codigo: eq.id });
           if (!data.ok) { toast(data.error || "No se pudo liberar el equipo.", "err"); return; }
-          toast(eq.id + " liberado — vuelve a estar disponible.", "ok");
+          if (data.correoEnviado === false) {
+            toast(eq.id + " liberado, pero el correo de devolución no se pudo enviar" + (data.correoError ? " (" + data.correoError + ")" : "") + ".", "err");
+          } else {
+            toast(eq.id + " liberado — vuelve a estar disponible.", "ok");
+          }
           lib.equipo = null; renderLiberar();
           cargarSnapshot(true);
         } finally { btn.disabled = false; }
