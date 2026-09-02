@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestión — Préstamo de Equipos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2f5f1; --surface: #ffffff; --surface-2: #eaf0ea; --border: #d7ddd5;
+    --ink: #1a231d; --ink-muted: #57655a; --ink-faint: #8b988d;
+    --accent: #2f6f5e; --accent-soft: #e1ede8; --accent-ink: #1d4a3d; --accent-strong: #24594b;
+    --good: #1f7a4d; --good-soft: #e3f3e8; --warning: #a9720b; --warning-soft: #faf1de;
+    --critical: #c23b3b; --critical-soft: #fbe9e9; --neutral-pill: #64717a; --neutral-pill-soft: #e9ecee;
+    --shadow: 0 1px 2px rgba(26,35,29,.05), 0 1px 10px rgba(26,35,29,.05); --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10140f; --surface: #171d16; --surface-2: #1e251b; --border: #2b3327;
+      --ink: #e7ede4; --ink-muted: #a3b0a0; --ink-faint: #6f7c6c;
+      --accent: #6fbfa2; --accent-soft: #1c2e27; --accent-ink: #bfe8d8; --accent-strong: #4f9c85;
+      --good: #4cbf7f; --good-soft: #16301f; --warning: #d9a441; --warning-soft: #332708;
+      --critical: #e2716f; --critical-soft: #391c1c; --neutral-pill: #9aa6a0; --neutral-pill-soft: #232a20;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 1px 14px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10140f; --surface: #171d16; --surface-2: #1e251b; --border: #2b3327;
+    --ink: #e7ede4; --ink-muted: #a3b0a0; --ink-faint: #6f7c6c;
+    --accent: #6fbfa2; --accent-soft: #1c2e27; --accent-ink: #bfe8d8; --accent-strong: #4f9c85;
+    --good: #4cbf7f; --good-soft: #16301f; --warning: #d9a441; --warning-soft: #332708;
+    --critical: #e2716f; --critical-soft: #391c1c; --neutral-pill: #9aa6a0; --neutral-pill-soft: #232a20;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 1px 14px rgba(0,0,0,.3);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: "Big Shoulders Display", sans-serif; font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: 0.2px; }
+  code, .mono, .mono-input { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  button { font-family: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 20px 64px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 4px 14px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand .mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #fff; flex: none; }
+  .brand .mark svg { width: 18px; height: 18px; }
+  .brand h1 { font-size: 26px; color: var(--ink); }
+  .brand .tag { font-size: 12.5px; color: var(--ink-faint); margin-top: 2px; }
+
+  .bell { position: relative; display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 8px 14px 8px 12px; cursor: pointer; box-shadow: var(--shadow); color: var(--ink); font-size: 13.5px; font-weight: 600; }
+  .bell:hover { border-color: var(--accent); }
+  .bell svg { width: 17px; height: 17px; color: var(--ink-muted); flex: none; }
+  .bell .dot { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--critical); color: #fff; font-size: 10.5px; display: none; align-items: center; justify-content: center; font-weight: 700; font-family: "IBM Plex Mono", monospace; border: 2px solid var(--bg); box-sizing: content-box; }
+  .bell.has-alert .dot { display: inline-flex; }
+  .bell.has-alert svg { color: var(--critical); }
+
+  .modebadge { font-size: 11.5px; color: var(--ink-faint); display: flex; align-items: center; gap: 6px; }
+  .modebadge .pulse { width: 6px; height: 6px; border-radius: 999px; background: var(--good); flex: none; }
+  .modebadge.offline .pulse { background: var(--critical); }
+  .modebadge button { background: none; border: none; color: var(--accent-ink); font-weight: 600; cursor: pointer; padding: 0; font-size: 11.5px; }
+
+  .tabs { display: flex; gap: 4px; overflow-x: auto; padding: 4px; margin: 0 0 22px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; -ms-overflow-style: none; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 9px 14px; border-radius: 9px; border: none; background: transparent; color: var(--ink-muted); font-size: 13.5px; font-weight: 600; cursor: pointer; position: relative; flex: none; }
+  .tab svg { width: 15px; height: 15px; flex: none; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { background: var(--surface); color: var(--accent-ink); box-shadow: var(--shadow); }
+  .tab .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--critical); color: #fff; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-family: "IBM Plex Mono", monospace; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
+  .panel + .panel { margin-top: 16px; }
+  .panel h2 { font-size: 20px; color: var(--ink); }
+  .panel .desc { color: var(--ink-muted); font-size: 13.5px; margin-top: 4px; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+  .field { margin-bottom: 16px; }
+  input[type=text], input[type=email], select { width: 100%; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 14.5px; font-family: inherit; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  button.btn { border: none; border-radius: 9px; padding: 12px 20px; font-size: 14.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-strong); }
+  .btn-primary:disabled { background: var(--ink-faint); cursor: not-allowed; }
+  .btn-ghost { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .btn-full { width: 100%; }
+  .btn svg { width: 15px; height: 15px; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 999px; }
+  .pill.disponible { background: var(--good-soft); color: var(--good); } .pill.disponible .dot { background: var(--good); }
+  .pill.prestado { background: var(--warning-soft); color: var(--warning); } .pill.prestado .dot { background: var(--warning); }
+  .pill.mantenimiento { background: var(--neutral-pill-soft); color: var(--neutral-pill); } .pill.mantenimiento .dot { background: var(--neutral-pill); }
+  .pill.baja { background: var(--critical-soft); color: var(--critical); } .pill.baja .dot { background: var(--critical); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+  .stat .n { font-family: "Big Shoulders Display", sans-serif; font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 12px; color: var(--ink-muted); margin-top: 4px; }
+  .stat.accent .n { color: var(--accent-ink); } .stat.warn .n { color: var(--warning); } .stat.crit .n { color: var(--critical); }
+
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-faint); font-weight: 700; padding: 0 10px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 11px 10px; border-bottom: 1px solid var(--border); font-size: 13.5px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td.code { font-weight: 600; }
+  td .sub { display: block; color: var(--ink-faint); font-size: 11.5px; margin-top: 2px; font-family: "Public Sans", sans-serif; }
+  .rowactions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .miniselect { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--ink); }
+  .icon-btn { border: 1px solid var(--border); background: var(--surface); border-radius: 6px; padding: 5px 7px; cursor: pointer; color: var(--ink-muted); }
+  .icon-btn:hover { color: var(--critical); border-color: var(--critical); }
+  .icon-btn svg { width: 13px; height: 13px; display: block; }
+
+  .kiosk { text-align: center; padding: 10px 0 4px; }
+  .kiosk .stepline { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 22px; }
+  .stepdot { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--ink-faint); }
+  .stepdot .circ { width: 22px; height: 22px; border-radius: 999px; background: var(--surface-2); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+  .stepdot.done .circ { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .stepdot.active { color: var(--accent-ink); } .stepdot.active .circ { border-color: var(--accent); color: var(--accent-ink); }
+  .stepline .bar { width: 34px; height: 1.5px; background: var(--border); }
+  .scanbox { max-width: 380px; margin: 0 auto; border: 1.5px dashed var(--border); border-radius: 14px; padding: 26px 22px; background: var(--surface-2); }
+  .scanbox svg.scanicon { width: 34px; height: 34px; color: var(--accent); margin-bottom: 10px; }
+  .scanbox .instr { font-size: 14.5px; font-weight: 600; margin-bottom: 3px; }
+  .scanbox .instr-sub { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 14px; }
+  .scaninput { width: 100%; text-align: center; padding: 13px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface); font-size: 16px; letter-spacing: 0.5px; }
+  .scaninput:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .resultcard { max-width: 420px; margin: 0 auto; text-align: left; border: 1px solid var(--border); border-radius: 12px; padding: 18px; background: var(--surface); }
+  .resultcard .rc-code { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--ink-faint); }
+  .resultcard .rc-title { font-size: 19px; font-weight: 700; font-family: "Big Shoulders Display", sans-serif; margin: 2px 0 10px; }
+  .kv { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 13.5px; }
+  .kv .k { color: var(--ink-faint); } .kv .v { font-weight: 600; text-align: right; }
+  .desc-narrow { max-width: 380px; margin: 0 auto 14px; text-align: left; color: var(--ink-muted); font-size: 13.5px; }
+
+  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13.5px; font-weight: 600; margin-top: 14px; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto; display: flex; gap: 9px; align-items: flex-start; }
+  .banner svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+  .banner.err { background: var(--critical-soft); color: var(--critical); }
+  .banner.ok { background: var(--good-soft); color: var(--good); }
+
+  .queue { display: flex; flex-direction: column; gap: 10px; }
+  .ticket { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--surface); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .ticket .t-type { width: 40px; height: 40px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; flex: none; }
+  .ticket .t-type svg { width: 19px; height: 19px; }
+  .ticket .t-main { flex: 1 1 200px; min-width: 0; }
+  .ticket .t-name { font-weight: 700; font-size: 14.5px; }
+  .ticket .t-sub { font-size: 12.5px; color: var(--ink-muted); }
+  .ticket .t-when { font-size: 11.5px; color: var(--ink-faint); font-family: "IBM Plex Mono", monospace; }
+  .ticket .t-actions { display: flex; gap: 8px; align-items: center; flex: none; }
+  .ticket.attended { opacity: 0.68; }
+  .ticket .t-badge { font-size: 11px; font-weight: 700; color: var(--good); background: var(--good-soft); padding: 3px 9px; border-radius: 999px; }
+  .empty { text-align: center; padding: 34px 16px; color: var(--ink-faint); }
+  .empty svg { width: 34px; height: 34px; margin-bottom: 10px; opacity: 0.6; }
+  .empty .t { font-weight: 600; color: var(--ink-muted); font-size: 14px; }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(10, 16, 11, 0.45); display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 50; overflow-y: auto; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 14px; max-width: 420px; width: 100%; padding: 22px; box-shadow: 0 10px 40px rgba(0,0,0,0.25); border: 1px solid var(--border); }
+  .modal h3 { font-size: 19px; margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 16px; }
+  .modal-close { float: right; background: none; border: none; color: var(--ink-faint); cursor: pointer; padding: 4px; }
+
+  .toast-wrap { position: fixed; top: 16px; right: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 32px); }
+  .toast { background: var(--ink); color: var(--bg); border-radius: 9px; padding: 11px 16px; font-size: 13.5px; font-weight: 600; box-shadow: 0 6px 24px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; animation: toastin 0.2s ease; }
+  @keyframes toastin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  footer.page { text-align: center; font-size: 12px; color: var(--ink-faint); margin-top: 30px; }
+
+  /* Dashboard / gráficos */
+  .viz-root { --cat-1: #2a78d6; --cat-2: #eb6834; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .viz-root { --cat-1: #3987e5; --cat-2: #d95926; } }
+  :root[data-theme="dark"] .viz-root { --cat-1: #3987e5; --cat-2: #d95926; }
+  .segmented { display: inline-flex; gap: 3px; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; }
+  .segmented button { border: none; background: transparent; color: var(--ink-muted); font-size: 12.5px; font-weight: 600; padding: 7px 12px; border-radius: 7px; cursor: pointer; font-family: inherit; }
+  .segmented button.active { background: var(--surface); color: var(--accent-ink); box-shadow: var(--shadow); }
+  .viz-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .viz-panel-head h3 { font-size: 15.5px; }
+  .viz-sub { font-size: 12px; color: var(--ink-faint); margin-bottom: 14px; }
+  .legend-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .legend-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-muted); font-weight: 600; }
+  .legend-chip .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .vizbar-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+  .vizbar-label { width: 40%; max-width: 190px; flex: none; font-size: 12.5px; color: var(--ink-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vizbar-track { flex: 1; position: relative; height: 20px; background: var(--surface-2); border-radius: 4px; }
+  .vizbar-fill { position: absolute; left: 0; top: 0; bottom: 0; min-width: 3px; border-radius: 0 4px 4px 0; transition: width .35s ease; }
+  .vizbar-value { width: 56px; flex: none; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .vizbar-row:hover .vizbar-fill, .vizbar-row:focus-within .vizbar-fill { filter: brightness(1.08); }
+  .viz-empty { text-align: center; padding: 22px 10px; color: var(--ink-faint); font-size: 13px; }
+  .viz-tooltip { position: fixed; z-index: 70; background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: none; white-space: nowrap; }
+  .viz-tooltip.show { display: block; }
+
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-panel { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 26px 24px; }
+  .login-panel label { margin-top: 2px; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+</style>
+</head>
+<body>
+<div class="login-wrap" id="loginScreen" hidden>
+  <div class="login-panel">
+    <div class="brand" style="margin-bottom:18px;">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/><path d="M9 20l1-4h4l1 4"/></svg></span>
+      <div><h1 style="font-size:21px;">Préstamo de Equipos</h1><div class="tag">Panel del encargado</div></div>
+    </div>
+    <div class="field"><label for="login-usuario">Usuario</label><input type="text" id="login-usuario" autocomplete="username"></div>
+    <div class="field"><label for="login-password">Contraseña</label><input type="password" id="login-password" autocomplete="current-password"></div>
+    <div id="loginError"></div>
+    <button class="btn btn-primary btn-full" id="btnLogin">Ingresar</button>
+    <p class="desc" style="margin-top:14px; font-size:12px;">¿Primera vez? Usa <code>admin</code> / <code>cambiar123</code> y cámbiala enseguida desde la pestaña "Usuarios".</p>
+  </div>
+</div>
+
+<div class="wrap" id="appRoot" hidden>
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/><path d="M9 20l1-4h4l1 4"/></svg></span>
+      <div>
+        <h1>Préstamo de Equipos</h1>
+        <div class="tag">Panel del encargado</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <div class="modebadge" id="modeBadge"><span class="pulse"></span><span id="modeBadgeText">conectando…</span> <button id="btnRefrescar">↻ actualizar</button></div>
+      <div class="modebadge"><span id="sesionUsuario"></span> <button id="btnLogout">cerrar sesión</button></div>
+      <button class="bell" id="bellBtn" title="Ver solicitudes pendientes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Solicitudes</span>
+        <span class="dot" id="bellDot">0</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="configWarning"></div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="solicitudes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Solicitudes <span class="n" id="tabQueueN" style="display:none;">0</span>
+    </button>
+    <button class="tab" data-view="asignar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+      Asignar préstamo
+    </button>
+    <button class="tab" data-view="liberar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 5 5v1"/></svg>
+      Liberar préstamo
+    </button>
+    <button class="tab" data-view="gestionar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Gestionar equipos
+    </button>
+    <button class="tab" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+      Dashboard
+    </button>
+    <button class="tab" data-view="usuarios">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Usuarios
+    </button>
+  </nav>
+
+  <section class="view active" data-view="solicitudes" id="view-solicitudes">
+    <div class="panel">
+      <div class="panel-head"><div><h2>Solicitudes</h2><p class="desc">Pedidos enviados desde el formulario de alumnos, más recientes primero.</p></div></div>
+      <div class="queue" id="queuePendientes"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2 style="font-size:17px;">Atendidas recientemente</h2></div></div>
+      <div class="queue" id="queueAtendidas"></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="asignar" id="view-asignar">
+    <div class="panel">
+      <div class="panel-head"><div><h2>Asignar préstamo</h2><p class="desc">Para un alumno que llega directamente al mostrador, sin solicitud previa.</p></div></div>
+      <div class="kiosk">
+        <div class="stepline">
+          <div class="stepdot active" id="asg-step1-dot"><span class="circ">1</span> Equipo</div><div class="bar"></div>
+          <div class="stepdot" id="asg-step2-dot"><span class="circ">2</span> Alumno</div><div class="bar"></div>
+          <div class="stepdot" id="asg-step3-dot"><span class="circ">3</span> Confirmar</div>
+        </div>
+        <div id="asg-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" data-view="liberar" id="view-liberar">
+    <div class="panel">
+      <div class="panel-head"><div><h2>Liberar préstamo</h2><p class="desc">Escanea o escribe el código de inventario del equipo que retorna.</p></div></div>
+      <div class="kiosk"><div id="lib-body"></div></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="gestionar" id="view-gestionar">
+    <div class="stats" id="gestStats"></div>
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2>Inventario</h2><p class="desc">Todos los equipos registrados.</p></div>
+        <button class="btn btn-primary" id="btnAbrirNuevo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Nuevo equipo</button>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Código</th><th>Tipo</th><th>Modelo</th><th>Estado</th><th>Asignado a</th><th></th></tr></thead>
+        <tbody id="equiposBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="view viz-root" data-view="dashboard" id="view-dashboard">
+    <div class="panel-head" style="margin-bottom:16px;">
+      <div><h2 style="font-size:20px;">Dashboard</h2><p class="desc">Estadísticas de todos los préstamos registrados.</p></div>
+      <div class="segmented" id="dashPeriodo">
+        <button data-periodo="7" type="button">7 días</button>
+        <button data-periodo="30" type="button">30 días</button>
+        <button data-periodo="todo" class="active" type="button">Todo</button>
+      </div>
+    </div>
+    <div id="dashBody"></div>
+  </section>
+
+  <section class="view" data-view="usuarios" id="view-usuarios">
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2>Usuarios</h2><p class="desc">Quiénes pueden entrar a este panel del encargado.</p></div>
+        <button class="btn btn-primary" id="btnAbrirNuevoUsuario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Nuevo usuario</button>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Usuario</th><th>Creado</th><th></th></tr></thead>
+        <tbody id="usuariosBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <footer class="page">Los datos vienen de tu Google Sheet — se actualizan cada pocos segundos.</footer>
+</div>
+
+<div class="modal-backdrop" id="modalNuevo">
+  <div class="modal">
+    <button class="modal-close" id="closeModalNuevo">✕</button>
+    <h3>Nuevo equipo</h3>
+    <div class="modal-sub">Se agrega al inventario como disponible.</div>
+    <div class="field"><label for="ne-codigo">Código de inventario</label><input type="text" id="ne-codigo" class="mono-input" placeholder="Ej. LAP-007"></div>
+    <div class="field"><label for="ne-tipo">Tipo</label><select id="ne-tipo"><option value="laptop">Laptop</option><option value="apple">Apple</option></select></div>
+    <div class="field"><label for="ne-modelo">Modelo</label><input type="text" id="ne-modelo" placeholder="Ej. Dell Latitude 5420"></div>
+    <div id="ne-error"></div>
+    <button class="btn btn-primary btn-full" id="btnGuardarNuevo">Agregar equipo</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalAtender">
+  <div class="modal">
+    <button class="modal-close" id="closeModalAtender">✕</button>
+    <h3>Atender solicitud</h3>
+    <div class="modal-sub" id="atenderQuien">—</div>
+    <div id="atenderBody"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalNuevoUsuario">
+  <div class="modal">
+    <button class="modal-close" id="closeModalNuevoUsuario">✕</button>
+    <h3>Nuevo usuario</h3>
+    <div class="modal-sub">Podrá entrar a este panel con estas credenciales.</div>
+    <div class="field"><label for="nu-usuario">Usuario</label><input type="text" id="nu-usuario" autocomplete="off"></div>
+    <div class="field"><label for="nu-password">Contraseña</label><input type="password" id="nu-password" autocomplete="new-password"></div>
+    <div class="hint">Mínimo 4 caracteres. Compártela con esa persona por un medio seguro.</div>
+    <div id="nu-error"></div>
+    <button class="btn btn-primary btn-full" id="btnGuardarNuevoUsuario" style="margin-top:12px;">Crear usuario</button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="viz-tooltip" id="vizTooltip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // -----------------------------------------------------------------
+  // CONFIGURACIÓN — pega aquí la URL de tu Web App de Apps Script
+  // (termina en /exec). Debe ser la MISMA que en formulario-alumno.html.
+  // -----------------------------------------------------------------
+  const API_URL = "https://script.google.com/macros/s/AKfycbxER8Ru3t8kXcHCBJYuh2hQNFPBXhWS5qL6_pv_c44GoymVLQi37KRljdBLi0AsBKapKQ/exec";
+  const POLL_MS = 6000;
+
+  const configured = API_URL && API_URL.indexOf("https://script.google.com/") === 0;
+  if (!configured) {
+    const aviso =
+      '<div class="banner err" style="max-width:none; margin:0 0 18px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>' +
+      '<span>Falta configurar la conexión con la base de datos. Edita este archivo y reemplaza <code>API_URL</code> con la URL de tu Web App de Apps Script (Code.gs) — la misma que en formulario-alumno.html.</span></div>';
+    document.getElementById("configWarning").innerHTML = aviso;
+    document.getElementById("loginError").innerHTML = aviso;
+  }
+
+  const state = { equipos: {}, solicitudes: {}, usuarios: [], historial: [] };
+  let dashPeriodo = "todo"; // "7" | "30" | "todo"
+  let prevPendingIds = new Set();
+  let firstLoad = true;
+
+  // -----------------------------------------------------------------
+  // Sesión (usuario / contraseña, verificado contra Code.gs)
+  // -----------------------------------------------------------------
+  let session = null; // { token, usuario }
+  function cargarSesionGuardada() {
+    try {
+      const raw = localStorage.getItem("prestamoSesion");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function guardarSesion(s) {
+    session = s;
+    try {
+      if (s) localStorage.setItem("prestamoSesion", JSON.stringify(s));
+      else localStorage.removeItem("prestamoSesion");
+    } catch (e) {}
+  }
+  function mostrarLogin() {
+    guardarSesion(null);
+    document.getElementById("appRoot").hidden = true;
+    document.getElementById("loginScreen").hidden = false;
+    document.getElementById("login-password").value = "";
+    setTimeout(() => document.getElementById("login-usuario").focus(), 30);
+  }
+  function mostrarApp() {
+    document.getElementById("loginScreen").hidden = true;
+    document.getElementById("appRoot").hidden = false;
+    document.getElementById("sesionUsuario").textContent = session.usuario;
+  }
+
+  function escapeHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function fmtRelative(iso) {
+    if (!iso) return "—";
+    const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (diffMin < 1) return "hace instantes";
+    if (diffMin < 60) return "hace " + diffMin + " min";
+    const h = Math.round(diffMin / 60);
+    if (h < 24) return "hace " + h + " h";
+    return "hace " + Math.round(h / 24) + " d";
+  }
+  function tipoLabel(t) { return t === "apple" ? "Apple" : "Laptop"; }
+  function estadoLabel(e) { return { disponible: "Disponible", prestado: "Prestado", mantenimiento: "Mantenimiento", baja: "De baja" }[e] || e; }
+  function normCode(s) { return String(s || "").trim().toUpperCase(); }
+  function validCorreoUP(v) { return /^[^\s@]+@up\.edu\.pe$/i.test(String(v || "").trim()); }
+  function errorBanner(msg) { return '<div class="banner err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg><span>' + escapeHtml(msg) + '</span></div>'; }
+  function equiposList() { return Object.values(state.equipos).sort((a, b) => (a.id < b.id ? -1 : 1)); }
+  function solicitudesList() { return Object.values(state.solicitudes).sort((a, b) => (a.creadoEn < b.creadoEn ? 1 : -1)); }
+
+  function toast(msg, kind) {
+    const wrap = document.getElementById("toastWrap");
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = (kind === "err"
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex:none;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex:none;"><path d="M20 6 9 17l-5-5"/></svg>')
+      + '<span>' + escapeHtml(msg) + '</span>';
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 4200);
+  }
+
+  async function apiGet(action) {
+    const token = session ? "&token=" + encodeURIComponent(session.token) : "";
+    const res = await fetch(API_URL + "?action=" + encodeURIComponent(action) + token, { cache: "no-store" });
+    const data = await res.json();
+    if (data && data.error === "no_autorizado") { toast("Tu sesión expiró. Vuelve a ingresar.", "err"); mostrarLogin(); }
+    return data;
+  }
+  async function apiPost(payload) {
+    if (session && !payload.token) payload = Object.assign({ token: session.token }, payload);
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data && data.error === "no_autorizado") { toast("Tu sesión expiró. Vuelve a ingresar.", "err"); mostrarLogin(); }
+    return data;
+  }
+
+  // -----------------------------------------------------------------
+  // Badges / navegación
+  // -----------------------------------------------------------------
+  function pendingCount() { return solicitudesList().filter(s => s.estado === "pendiente").length; }
+  function renderBadges() {
+    const n = pendingCount();
+    const bell = document.getElementById("bellBtn");
+    const dot = document.getElementById("bellDot");
+    const tabN = document.getElementById("tabQueueN");
+    dot.textContent = n > 9 ? "9+" : String(n);
+    tabN.textContent = n > 9 ? "9+" : String(n);
+    if (n > 0) { bell.classList.add("has-alert"); tabN.style.display = "inline-flex"; }
+    else { bell.classList.remove("has-alert"); tabN.style.display = "none"; }
+  }
+  function showView(name) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.getAttribute("data-view") === name));
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.getAttribute("data-view") === name));
+    if (name === "usuarios") cargarUsuarios();
+    if (name === "dashboard") cargarHistorial();
+  }
+  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showView(t.getAttribute("data-view"))));
+  document.getElementById("bellBtn").addEventListener("click", () => showView("solicitudes"));
+  document.getElementById("btnRefrescar").addEventListener("click", () => cargarSnapshot(true));
+
+  // -----------------------------------------------------------------
+  // Solicitudes
+  // -----------------------------------------------------------------
+  function ticketHtml(s) {
+    const attended = s.estado !== "pendiente";
+    const icon = s.tipoEquipo === "apple"
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/></svg>';
+    return '<div class="ticket ' + (attended ? "attended" : "") + '" data-id="' + escapeHtml(s.id) + '">' +
+      '<span class="t-type">' + icon + '</span>' +
+      '<div class="t-main"><div class="t-name">' + escapeHtml(s.nombreCompleto) + ' <span style="font-weight:500;color:var(--ink-faint);">— ' + tipoLabel(s.tipoEquipo) + '</span></div>' +
+      '<div class="t-sub">' + escapeHtml(s.correo) + ' &middot; ' + escapeHtml(s.facultad) + '</div></div>' +
+      '<div class="t-when">' + fmtRelative(s.creadoEn) + '</div>' +
+      (attended
+        ? '<span class="t-badge">' + (s.equipoAsignado ? "Asignado " + escapeHtml(s.equipoAsignado) : "Atendida") + '</span>'
+        : '<div class="t-actions"><button class="btn btn-primary" data-atender="' + escapeHtml(s.id) + '">Atender</button></div>') +
+      '</div>';
+  }
+  function renderSolicitudes() {
+    const all = solicitudesList();
+    const pend = all.filter(s => s.estado === "pendiente");
+    const atendidas = all.filter(s => s.estado !== "pendiente").slice(0, 8);
+    const qp = document.getElementById("queuePendientes");
+    qp.innerHTML = pend.length ? pend.map(ticketHtml).join("")
+      : '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="t">No hay solicitudes pendientes</div></div>';
+    const qa = document.getElementById("queueAtendidas");
+    qa.innerHTML = atendidas.length ? atendidas.map(ticketHtml).join("")
+      : '<div class="empty" style="padding:20px;"><div class="t">Todavía no se atendió ninguna</div></div>';
+    qp.querySelectorAll("[data-atender]").forEach(b => b.addEventListener("click", () => abrirAtender(b.getAttribute("data-atender"))));
+  }
+
+  const modalAtender = document.getElementById("modalAtender");
+  let atenderId = null;
+  function abrirAtender(id) {
+    atenderId = id;
+    const s = state.solicitudes[id];
+    if (!s) return;
+    document.getElementById("atenderQuien").textContent = s.nombreCompleto + " · " + s.correo + " · " + s.facultad + " · pide " + tipoLabel(s.tipoEquipo);
+    document.getElementById("atenderBody").innerHTML =
+      '<div class="field"><label for="at-codigo">Código de inventario del equipo a entregar</label>' +
+      '<input type="text" id="at-codigo" class="mono-input scaninput" placeholder="Escanea o escribe el código" style="text-align:left;" autocomplete="off"></div>' +
+      '<div id="at-error"></div>' +
+      '<button class="btn btn-primary btn-full" id="at-confirmar">Confirmar entrega</button>';
+    modalAtender.classList.add("open");
+    const input = document.getElementById("at-codigo");
+    setTimeout(() => input.focus(), 30);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") confirmarAtencion(); });
+    document.getElementById("at-confirmar").addEventListener("click", confirmarAtencion);
+  }
+  async function confirmarAtencion() {
+    const codigo = normCode(document.getElementById("at-codigo").value);
+    const errBox = document.getElementById("at-error");
+    errBox.innerHTML = "";
+    if (!codigo) return;
+    const btn = document.getElementById("at-confirmar");
+    btn.disabled = true;
+    try {
+      const data = await apiPost({ action: "atenderSolicitud", solicitudId: atenderId, codigo: codigo });
+      if (!data.ok) { errBox.innerHTML = errorBanner(data.error || "No se pudo completar la entrega."); return; }
+      modalAtender.classList.remove("open");
+      toast(codigo + " asignado correctamente.", "ok");
+      cargarSnapshot(true);
+    } catch (e) {
+      errBox.innerHTML = errorBanner("No se pudo conectar con el servidor.");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById("closeModalAtender").addEventListener("click", () => modalAtender.classList.remove("open"));
+  modalAtender.addEventListener("click", e => { if (e.target === modalAtender) modalAtender.classList.remove("open"); });
+
+  // -----------------------------------------------------------------
+  // Asignar préstamo (presencial, 3 pasos)
+  // -----------------------------------------------------------------
+  const asg = { step: 1, equipo: null, alumno: null };
+  function setAsgSteps() {
+    ["1", "2", "3"].forEach((n, i) => {
+      const dot = document.getElementById("asg-step" + n + "-dot");
+      if (!dot) return;
+      dot.classList.toggle("active", asg.step === i + 1);
+      dot.classList.toggle("done", asg.step > i + 1);
+    });
+  }
+  function renderAsignar() {
+    setAsgSteps();
+    const body = document.getElementById("asg-body");
+    if (asg.step === 1) {
+      body.innerHTML =
+        '<div class="scanbox"><svg class="scanicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>' +
+        '<div class="instr">Escanea el código del equipo</div><div class="instr-sub">o escríbelo y presiona Enter</div>' +
+        '<input type="text" class="scaninput mono-input" id="asg-codigo" placeholder="Código de inventario" autocomplete="off"><div id="asg-error"></div></div>';
+      const input = document.getElementById("asg-codigo");
+      setTimeout(() => input.focus(), 30);
+      input.addEventListener("keydown", e => { if (e.key === "Enter") asgLeerCodigo(); });
+    } else if (asg.step === 2) {
+      body.innerHTML =
+        '<div class="resultcard" style="margin-bottom:18px;"><div class="rc-code">' + escapeHtml(asg.equipo.id) + '</div>' +
+        '<div class="rc-title">' + escapeHtml(asg.equipo.modelo) + '</div>' +
+        '<div class="kv"><span class="k">Tipo</span><span class="v">' + tipoLabel(asg.equipo.tipo) + '</span></div></div>' +
+        '<div style="max-width:380px; margin:0 auto; text-align:left;"><div class="desc" style="margin-bottom:14px;">Datos del alumno que se lleva el equipo.</div>' +
+        '<div class="field"><label for="asg-a-nombre">Nombre completo</label><input type="text" id="asg-a-nombre" autocomplete="name"></div>' +
+        '<div class="field"><label for="asg-a-correo">Correo UP</label><input type="email" id="asg-a-correo" placeholder="nombre.apellido@up.edu.pe" autocomplete="email"></div>' +
+        '<div class="field"><label for="asg-a-facultad">Facultad</label><input type="text" id="asg-a-facultad"></div>' +
+        '<div id="asg-error2"></div><div style="display:flex; gap:8px;"><button class="btn btn-ghost" id="asg-back">Atrás</button>' +
+        '<button class="btn btn-primary btn-full" id="asg-continuar">Continuar</button></div></div>';
+      setTimeout(() => document.getElementById("asg-a-nombre").focus(), 30);
+      document.getElementById("asg-back").addEventListener("click", () => { asg.step = 1; renderAsignar(); });
+      document.getElementById("asg-continuar").addEventListener("click", asgConfirmarDatos);
+    } else if (asg.step === 3) {
+      body.innerHTML =
+        '<div class="resultcard"><div class="rc-code">' + escapeHtml(asg.equipo.id) + '</div><div class="rc-title">' + escapeHtml(asg.equipo.modelo) + '</div>' +
+        '<div class="kv"><span class="k">Para</span><span class="v">' + escapeHtml(asg.alumno.nombre) + '</span></div>' +
+        '<div class="kv"><span class="k">Correo</span><span class="v">' + escapeHtml(asg.alumno.correo) + '</span></div>' +
+        '<div class="kv"><span class="k">Facultad</span><span class="v">' + escapeHtml(asg.alumno.facultad) + '</span></div></div>' +
+        '<div style="max-width:380px; margin:16px auto 0; display:flex; gap:8px;"><button class="btn btn-ghost" id="asg-back2">Atrás</button>' +
+        '<button class="btn btn-primary btn-full" id="asg-finalizar">Confirmar préstamo</button></div>';
+      document.getElementById("asg-back2").addEventListener("click", () => { asg.step = 2; renderAsignar(); });
+      document.getElementById("asg-finalizar").addEventListener("click", asgFinalizar);
+    }
+  }
+  function asgLeerCodigo() {
+    const codigo = normCode(document.getElementById("asg-codigo").value);
+    const errBox = document.getElementById("asg-error");
+    if (!codigo) return;
+    const eq = state.equipos[codigo];
+    if (!eq) { errBox.innerHTML = errorBanner('No existe un equipo con el código "' + codigo + '".'); return; }
+    if (eq.estado !== "disponible") { errBox.innerHTML = errorBanner(codigo + " no está disponible (estado: " + estadoLabel(eq.estado) + ")."); return; }
+    asg.equipo = eq; asg.step = 2; renderAsignar();
+  }
+  function asgConfirmarDatos() {
+    const nombre = document.getElementById("asg-a-nombre").value.trim();
+    const correo = document.getElementById("asg-a-correo").value.trim();
+    const facultad = document.getElementById("asg-a-facultad").value.trim();
+    const errBox = document.getElementById("asg-error2");
+    if (!nombre || !facultad) { errBox.innerHTML = errorBanner("Completa el nombre y la facultad del alumno."); return; }
+    if (!validCorreoUP(correo)) { errBox.innerHTML = errorBanner("Ingresa un correo UP válido (debe terminar en @up.edu.pe)."); return; }
+    asg.alumno = { nombre, correo, facultad };
+    asg.step = 3; renderAsignar();
+  }
+  async function asgFinalizar() {
+    const btn = document.getElementById("asg-finalizar");
+    btn.disabled = true;
+    try {
+      const data = await apiPost({ action: "asignarPresencial", codigo: asg.equipo.id, nombre: asg.alumno.nombre, correo: asg.alumno.correo, facultad: asg.alumno.facultad });
+      if (!data.ok) { toast(data.error || "No se pudo asignar el equipo.", "err"); return; }
+      toast(asg.equipo.id + " asignado a " + asg.alumno.nombre + ".", "ok");
+      asg.step = 1; asg.equipo = null; asg.alumno = null;
+      renderAsignar();
+      cargarSnapshot(true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // -----------------------------------------------------------------
+  // Liberar préstamo
+  // -----------------------------------------------------------------
+  const lib = { equipo: null };
+  function renderLiberar() {
+    const body = document.getElementById("lib-body");
+    if (!lib.equipo) {
+      body.innerHTML =
+        '<div class="scanbox"><svg class="scanicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>' +
+        '<div class="instr">Escanea el código del equipo que retorna</div><div class="instr-sub">o escríbelo y presiona Enter</div>' +
+        '<input type="text" class="scaninput mono-input" id="lib-codigo" placeholder="Código de inventario" autocomplete="off"><div id="lib-error"></div></div>';
+      const input = document.getElementById("lib-codigo");
+      setTimeout(() => input.focus(), 30);
+      input.addEventListener("keydown", e => { if (e.key === "Enter") libLeerCodigo(); });
+    } else {
+      const eq = lib.equipo;
+      const a = eq.prestadoA || {};
+      body.innerHTML =
+        '<div class="resultcard"><div class="rc-code">' + escapeHtml(eq.id) + '</div><div class="rc-title">' + escapeHtml(eq.modelo) + '</div>' +
+        '<div class="kv"><span class="k">Prestado a</span><span class="v">' + escapeHtml(a.nombre || "—") + '</span></div>' +
+        '<div class="kv"><span class="k">Correo</span><span class="v">' + escapeHtml(a.correo || "—") + '</span></div>' +
+        '<div class="kv"><span class="k">Facultad</span><span class="v">' + escapeHtml(a.facultad || "—") + '</span></div>' +
+        '<div class="kv"><span class="k">Desde</span><span class="v">' + fmtRelative(eq.prestadoEn) + '</span></div></div>' +
+        '<div style="max-width:380px; margin:16px auto 0; display:flex; gap:8px;"><button class="btn btn-ghost" id="lib-cancelar">Cancelar</button>' +
+        '<button class="btn btn-primary btn-full" id="lib-confirmar">Confirmar devolución</button></div>';
+      document.getElementById("lib-cancelar").addEventListener("click", () => { lib.equipo = null; renderLiberar(); });
+      document.getElementById("lib-confirmar").addEventListener("click", async () => {
+        const btn = document.getElementById("lib-confirmar");
+        btn.disabled = true;
+        try {
+          const data = await apiPost({ action: "liberarEquipo", codigo: eq.id });
+          if (!data.ok) { toast(data.error || "No se pudo liberar el equipo.", "err"); return; }
+          toast(eq.id + " liberado — vuelve a estar disponible.", "ok");
+          lib.equipo = null; renderLiberar();
+          cargarSnapshot(true);
+        } finally { btn.disabled = false; }
+      });
+    }
+  }
+  function libLeerCodigo() {
+    const codigo = normCode(document.getElementById("lib-codigo").value);
+    const errBox = document.getElementById("lib-error");
+    if (!codigo) return;
+    const eq = state.equipos[codigo];
+    if (!eq) { errBox.innerHTML = errorBanner('No existe un equipo con el código "' + codigo + '".'); return; }
+    if (eq.estado !== "prestado") { errBox.innerHTML = errorBanner(codigo + " no está prestado actualmente (estado: " + estadoLabel(eq.estado) + ")."); return; }
+    lib.equipo = eq; renderLiberar();
+  }
+
+  // -----------------------------------------------------------------
+  // Gestionar equipos
+  // -----------------------------------------------------------------
+  function renderGestStats() {
+    const list = equiposList();
+    const c = { disponible: 0, prestado: 0, mantenimiento: 0, baja: 0 };
+    list.forEach(e => c[e.estado] = (c[e.estado] || 0) + 1);
+    document.getElementById("gestStats").innerHTML =
+      '<div class="stat"><div class="n">' + list.length + '</div><div class="l">Equipos registrados</div></div>' +
+      '<div class="stat accent"><div class="n">' + c.disponible + '</div><div class="l">Disponibles</div></div>' +
+      '<div class="stat warn"><div class="n">' + c.prestado + '</div><div class="l">Prestados</div></div>' +
+      '<div class="stat crit"><div class="n">' + (c.mantenimiento + c.baja) + '</div><div class="l">Mantenimiento / baja</div></div>';
+  }
+  function renderEquiposTable() {
+    const rows = equiposList().map(e => {
+      const asignado = e.estado === "prestado" && e.prestadoA
+        ? escapeHtml(e.prestadoA.nombre) + '<span class="sub">' + escapeHtml(e.prestadoA.correo) + '</span>'
+        : '<span style="color:var(--ink-faint);">—</span>';
+      const estadoOpts = ["disponible", "mantenimiento", "baja"].map(s => '<option value="' + s + '" ' + (e.estado === s ? "selected" : "") + '>' + estadoLabel(s) + '</option>').join("");
+      const selectHtml = e.estado === "prestado"
+        ? '<span class="pill prestado"><span class="dot"></span>Prestado</span>'
+        : '<select class="miniselect" data-estado="' + escapeHtml(e.id) + '">' + estadoOpts + '</select>';
+      return '<tr><td class="code">' + escapeHtml(e.id) + '</td><td>' + tipoLabel(e.tipo) + '</td><td>' + escapeHtml(e.modelo) + '</td>' +
+        '<td>' + selectHtml + '</td><td>' + asignado + '</td>' +
+        '<td><div class="rowactions">' + (e.estado === "prestado" ? "" :
+          '<button class="icon-btn" data-del="' + escapeHtml(e.id) + '" title="Eliminar del inventario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>') +
+        '</div></td></tr>';
+    }).join("");
+    document.getElementById("equiposBody").innerHTML = rows || '<tr><td colspan="6"><div class="empty"><div class="t">Sin equipos registrados todavía</div></div></td></tr>';
+
+    document.querySelectorAll("[data-estado]").forEach(sel => {
+      sel.addEventListener("change", async () => {
+        const id = sel.getAttribute("data-estado");
+        const nuevoEstado = sel.value;
+        const data = await apiPost({ action: "actualizarEstadoEquipo", codigo: id, estado: nuevoEstado });
+        if (!data.ok) { toast(data.error || "No se pudo actualizar.", "err"); cargarSnapshot(true); return; }
+        toast(id + " → " + estadoLabel(nuevoEstado) + ".", "ok");
+        cargarSnapshot(true);
+      });
+    });
+    document.querySelectorAll("[data-del]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-del");
+        if (!confirm('¿Eliminar ' + id + ' del inventario? Esta acción no se puede deshacer.')) return;
+        const data = await apiPost({ action: "eliminarEquipo", codigo: id });
+        if (!data.ok) { toast(data.error || "No se pudo eliminar.", "err"); return; }
+        toast(id + " eliminado del inventario.", "ok");
+        cargarSnapshot(true);
+      });
+    });
+  }
+  function renderGestionar() { renderGestStats(); renderEquiposTable(); }
+
+  const modalNuevo = document.getElementById("modalNuevo");
+  document.getElementById("btnAbrirNuevo").addEventListener("click", () => {
+    document.getElementById("ne-codigo").value = "";
+    document.getElementById("ne-modelo").value = "";
+    document.getElementById("ne-tipo").value = "laptop";
+    document.getElementById("ne-error").innerHTML = "";
+    modalNuevo.classList.add("open");
+    setTimeout(() => document.getElementById("ne-codigo").focus(), 30);
+  });
+  document.getElementById("closeModalNuevo").addEventListener("click", () => modalNuevo.classList.remove("open"));
+  modalNuevo.addEventListener("click", e => { if (e.target === modalNuevo) modalNuevo.classList.remove("open"); });
+  document.getElementById("btnGuardarNuevo").addEventListener("click", async () => {
+    const codigo = normCode(document.getElementById("ne-codigo").value);
+    const tipo = document.getElementById("ne-tipo").value;
+    const modelo = document.getElementById("ne-modelo").value.trim();
+    const errBox = document.getElementById("ne-error");
+    errBox.innerHTML = "";
+    if (!codigo || !modelo) { errBox.innerHTML = errorBanner("Ingresa el código y el modelo."); return; }
+    const data = await apiPost({ action: "agregarEquipo", codigo, tipo, modelo });
+    if (!data.ok) { errBox.innerHTML = errorBanner(data.error || "No se pudo agregar el equipo."); return; }
+    modalNuevo.classList.remove("open");
+    toast(codigo + " agregado al inventario.", "ok");
+    cargarSnapshot(true);
+  });
+
+  // -----------------------------------------------------------------
+  // Dashboard
+  // -----------------------------------------------------------------
+  // Mañana 7:00–14:00 y Tarde 14:00–21:00, lunes a viernes. Sábado 7:00–16:00
+  // en un solo bloque. Cualquier otro momento (incl. domingo) es "fuera de horario".
+  function claseTurno(iso) {
+    if (!iso) return "fuera";
+    const d = new Date(iso);
+    const dia = d.getDay(); // 0=domingo … 6=sábado
+    const hora = d.getHours() + d.getMinutes() / 60;
+    if (dia >= 1 && dia <= 5) {
+      if (hora >= 7 && hora < 14) return "manana";
+      if (hora >= 14 && hora < 21) return "tarde";
+    } else if (dia === 6) {
+      if (hora >= 7 && hora < 16) return "sabado";
+    }
+    return "fuera";
+  }
+  const TURNO_LABEL = { manana: "Mañana (L–V)", tarde: "Tarde (L–V)", sabado: "Sábado", fuera: "Fuera de horario" };
+
+  async function cargarHistorial() {
+    const data = await apiGet("historial");
+    if (!data.ok) return;
+    state.historial = data.historial || [];
+    renderDashboard();
+  }
+
+  document.querySelectorAll("#dashPeriodo button").forEach(b => {
+    b.addEventListener("click", () => {
+      dashPeriodo = b.getAttribute("data-periodo");
+      document.querySelectorAll("#dashPeriodo button").forEach(x => x.classList.toggle("active", x === b));
+      renderDashboard();
+    });
+  });
+
+  function historialEnRango() {
+    if (dashPeriodo === "todo") return state.historial;
+    const dias = Number(dashPeriodo);
+    const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
+    return state.historial.filter(h => h.asignadoEn && new Date(h.asignadoEn).getTime() >= desde);
+  }
+  function solicitudesEnRango() {
+    const all = solicitudesList();
+    if (dashPeriodo === "todo") return all;
+    const dias = Number(dashPeriodo);
+    const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
+    return all.filter(s => s.creadoEn && new Date(s.creadoEn).getTime() >= desde);
+  }
+  function fmtDuracion(horas) {
+    if (horas == null || isNaN(horas)) return "—";
+    if (horas < 48) return horas.toFixed(1) + " h";
+    return (horas / 24).toFixed(1) + " d";
+  }
+  function contarPor(items, keyFn) {
+    const c = {};
+    items.forEach(it => { const k = keyFn(it); c[k] = (c[k] || 0) + 1; });
+    return c;
+  }
+  function topN(counts, n, labelFn) {
+    const rows = Object.keys(counts).map(k => ({ key: k, label: labelFn ? labelFn(k) : k, value: counts[k] }))
+      .sort((a, b) => b.value - a.value);
+    if (rows.length <= n) return rows;
+    const top = rows.slice(0, n);
+    const restoTotal = rows.slice(n).reduce((s, r) => s + r.value, 0);
+    if (restoTotal > 0) top.push({ key: "__otras__", label: "Otras", value: restoTotal });
+    return top;
+  }
+
+  // Fila de barra horizontal: color plano (job = comparar magnitud), la posición del
+  // puntero/foco muestra el detalle en el tooltip compartido; el valor va aparte, nunca
+  // recortado por la barra.
+  function vizBarRows(rows, colorCss) {
+    if (!rows.length) return '<div class="viz-empty">Sin datos todavía.</div>';
+    const max = Math.max.apply(null, rows.map(r => r.value)) || 1;
+    return rows.map(r => {
+      const pct = Math.max((r.value / max) * 100, 2);
+      const label = escapeHtml(r.label);
+      return '<div class="vizbar-row" tabindex="0" data-tip="' + label + ': ' + r.value + '">' +
+        '<span class="vizbar-label" title="' + label + '">' + label + '</span>' +
+        '<span class="vizbar-track"><span class="vizbar-fill" style="width:' + pct.toFixed(1) + '%; background:' + colorCss + ';"></span></span>' +
+        '<span class="vizbar-value">' + r.value + '</span></div>';
+    }).join("");
+  }
+  function wireVizTooltips(root) {
+    const tip = document.getElementById("vizTooltip");
+    root.querySelectorAll("[data-tip]").forEach(el => {
+      const show = evt => {
+        tip.textContent = el.getAttribute("data-tip");
+        const x = evt.clientX != null ? evt.clientX + 14 : el.getBoundingClientRect().right;
+        const y = evt.clientY != null ? evt.clientY + 14 : el.getBoundingClientRect().top;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+        tip.classList.add("show");
+      };
+      el.addEventListener("pointermove", show);
+      el.addEventListener("pointerenter", show);
+      el.addEventListener("focus", () => {
+        const r = el.getBoundingClientRect();
+        tip.textContent = el.getAttribute("data-tip");
+        tip.style.left = r.left + "px"; tip.style.top = (r.bottom + 6) + "px";
+        tip.classList.add("show");
+      });
+      el.addEventListener("pointerleave", () => tip.classList.remove("show"));
+      el.addEventListener("blur", () => tip.classList.remove("show"));
+    });
+  }
+
+  function renderDashboard() {
+    const body = document.getElementById("dashBody");
+    if (!state.historial.length && !solicitudesList().length) {
+      body.innerHTML = '<div class="panel"><div class="viz-empty">Todavía no hay préstamos registrados — este dashboard se llena a medida que se atienden solicitudes y se asignan equipos.</div></div>';
+      return;
+    }
+    const hist = historialEnRango();
+    const cerrados = hist.filter(h => h.devueltoEn);
+    const activos = equiposList().filter(e => e.estado === "prestado").length;
+    const sols = solicitudesEnRango();
+    const solAtendidas = sols.filter(s => s.estado !== "pendiente").length;
+    const tasaAtencion = sols.length ? Math.round((solAtendidas / sols.length) * 100) : null;
+    const duracionProm = cerrados.length
+      ? cerrados.reduce((s, h) => s + (new Date(h.devueltoEn) - new Date(h.asignadoEn)), 0) / cerrados.length / 3600000
+      : null;
+
+    const turnoRows = topN(contarPor(hist, h => claseTurno(h.asignadoEn)), 8, k => TURNO_LABEL[k] || k);
+    const facultadRows = topN(contarPor(hist, h => (h.alumnoFacultad || "Sin especificar").trim()), 6);
+    const equipoRows = topN(contarPor(hist, h => h.codigo + " — " + h.modelo), 6);
+    const tipoCounts = contarPor(hist, h => h.tipo);
+    const origenCounts = contarPor(hist, h => h.origen);
+
+    body.innerHTML =
+      '<div class="stats" style="grid-template-columns:repeat(4,1fr);">' +
+        '<div class="stat accent"><div class="n">' + hist.length + '</div><div class="l">Préstamos en el periodo</div></div>' +
+        '<div class="stat warn"><div class="n">' + activos + '</div><div class="l">Préstamos activos ahora</div></div>' +
+        '<div class="stat"><div class="n">' + fmtDuracion(duracionProm) + '</div><div class="l">Duración promedio</div></div>' +
+        '<div class="stat"><div class="n">' + (tasaAtencion == null ? "—" : tasaAtencion + "%") + '</div><div class="l">Solicitudes atendidas</div></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Préstamos por turno</h3></div>' +
+        '<div class="viz-sub">Mañana 7:00–14:00 y Tarde 14:00–21:00 (lun–vie) · Sábado 7:00–16:00.</div>' +
+        '<div id="vizTurno"></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Facultades que más solicitan</h3></div>' +
+        '<div class="viz-sub">Por alumno registrado en el préstamo.</div>' +
+        '<div id="vizFacultad"></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Equipos más prestados</h3></div>' +
+        '<div class="viz-sub">Por código de inventario.</div>' +
+        '<div id="vizEquipos"></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Tipo de equipo</h3></div>' +
+        '<div class="legend-row"><span class="legend-chip"><span class="sw" style="background:var(--cat-1);"></span>Laptop</span><span class="legend-chip"><span class="sw" style="background:var(--cat-2);"></span>Apple</span></div>' +
+        '<div id="vizTipo"></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Origen del préstamo</h3></div>' +
+        '<div class="legend-row"><span class="legend-chip"><span class="sw" style="background:var(--cat-1);"></span>Por solicitud</span><span class="legend-chip"><span class="sw" style="background:var(--cat-2);"></span>Presencial</span></div>' +
+        '<div id="vizOrigen"></div>' +
+      '</div>';
+
+    document.getElementById("vizTurno").innerHTML = vizBarRows(turnoRows, "var(--accent)");
+    document.getElementById("vizFacultad").innerHTML = vizBarRows(facultadRows, "var(--accent)");
+    document.getElementById("vizEquipos").innerHTML = vizBarRows(equipoRows, "var(--accent)");
+    document.getElementById("vizTipo").innerHTML = vizBarRows([
+      { label: "Laptop", value: tipoCounts.laptop || 0 },
+      { label: "Apple", value: tipoCounts.apple || 0 },
+    ].filter(r => r.value > 0), "var(--ink-faint)");
+    document.getElementById("vizOrigen").innerHTML = vizBarRows([
+      { label: "Por solicitud", value: origenCounts.solicitud || 0 },
+      { label: "Presencial", value: origenCounts.presencial || 0 },
+    ].filter(r => r.value > 0), "var(--ink-faint)");
+    // colores categóricos para tipo/origen (2 series con orden fijo: slot 1 y slot 2)
+    ["vizTipo", "vizOrigen"].forEach(id => {
+      const fills = document.querySelectorAll("#" + id + " .vizbar-fill");
+      if (fills[0]) fills[0].style.background = "var(--cat-1)";
+      if (fills[1]) fills[1].style.background = "var(--cat-2)";
+    });
+    wireVizTooltips(body);
+  }
+
+  // -----------------------------------------------------------------
+  // Usuarios (gestión de acceso al panel)
+  // -----------------------------------------------------------------
+  function renderUsuarios() {
+    const rows = state.usuarios.map(u => {
+      const esUsuarioActual = session && u.usuario.toLowerCase() === session.usuario.toLowerCase();
+      return '<tr><td class="code">' + escapeHtml(u.usuario) + (esUsuarioActual ? ' <span class="sub" style="display:inline;">(tú)</span>' : '') + '</td>' +
+        '<td>' + fmtRelative(u.creadoEn) + '</td>' +
+        '<td><div class="rowactions">' +
+        '<button class="btn btn-ghost" data-cambiar-pass="' + escapeHtml(u.usuario) + '" style="padding:6px 10px; font-size:12.5px;">Cambiar contraseña</button>' +
+        '<button class="icon-btn" data-del-usuario="' + escapeHtml(u.usuario) + '" title="Eliminar usuario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>' +
+        '</div></td></tr>';
+    }).join("");
+    document.getElementById("usuariosBody").innerHTML = rows || '<tr><td colspan="3"><div class="empty"><div class="t">Sin usuarios</div></div></td></tr>';
+
+    document.querySelectorAll("[data-cambiar-pass]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const usuario = btn.getAttribute("data-cambiar-pass");
+        const nueva = window.prompt('Nueva contraseña para "' + usuario + '" (mínimo 4 caracteres):');
+        if (nueva === null) return;
+        const data = await apiPost({ action: "cambiarPassword", usuario, nuevaPassword: nueva });
+        if (!data.ok) { toast(data.error || "No se pudo cambiar la contraseña.", "err"); return; }
+        toast("Contraseña de " + usuario + " actualizada.", "ok");
+      });
+    });
+    document.querySelectorAll("[data-del-usuario]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const usuario = btn.getAttribute("data-del-usuario");
+        if (!confirm('¿Eliminar el usuario "' + usuario + '"? Ya no podrá iniciar sesión.')) return;
+        const data = await apiPost({ action: "eliminarUsuario", usuario });
+        if (!data.ok) { toast(data.error || "No se pudo eliminar el usuario.", "err"); return; }
+        toast(usuario + " eliminado.", "ok");
+        if (session && usuario.toLowerCase() === session.usuario.toLowerCase()) { mostrarLogin(); return; }
+        cargarUsuarios();
+      });
+    });
+  }
+  async function cargarUsuarios() {
+    const data = await apiGet("usuarios");
+    if (!data.ok) return;
+    state.usuarios = data.usuarios || [];
+    renderUsuarios();
+  }
+
+  const modalNuevoUsuario = document.getElementById("modalNuevoUsuario");
+  document.getElementById("btnAbrirNuevoUsuario").addEventListener("click", () => {
+    document.getElementById("nu-usuario").value = "";
+    document.getElementById("nu-password").value = "";
+    document.getElementById("nu-error").innerHTML = "";
+    modalNuevoUsuario.classList.add("open");
+    setTimeout(() => document.getElementById("nu-usuario").focus(), 30);
+  });
+  document.getElementById("closeModalNuevoUsuario").addEventListener("click", () => modalNuevoUsuario.classList.remove("open"));
+  modalNuevoUsuario.addEventListener("click", e => { if (e.target === modalNuevoUsuario) modalNuevoUsuario.classList.remove("open"); });
+  document.getElementById("btnGuardarNuevoUsuario").addEventListener("click", async () => {
+    const nuevoUsuario = document.getElementById("nu-usuario").value.trim();
+    const nuevaPassword = document.getElementById("nu-password").value;
+    const errBox = document.getElementById("nu-error");
+    errBox.innerHTML = "";
+    if (!nuevoUsuario) { errBox.innerHTML = errorBanner("Ingresa un nombre de usuario."); return; }
+    if (nuevaPassword.length < 4) { errBox.innerHTML = errorBanner("La contraseña debe tener al menos 4 caracteres."); return; }
+    const data = await apiPost({ action: "crearUsuario", nuevoUsuario, nuevaPassword });
+    if (!data.ok) { errBox.innerHTML = errorBanner(data.error || "No se pudo crear el usuario."); return; }
+    modalNuevoUsuario.classList.remove("open");
+    toast(nuevoUsuario + " creado.", "ok");
+    cargarUsuarios();
+  });
+
+  // -----------------------------------------------------------------
+  // Login / logout
+  // -----------------------------------------------------------------
+  async function intentarLogin() {
+    const usuario = document.getElementById("login-usuario").value.trim();
+    const password = document.getElementById("login-password").value;
+    const errBox = document.getElementById("loginError");
+    errBox.innerHTML = "";
+    if (!usuario || !password) { errBox.innerHTML = errorBanner("Ingresa usuario y contraseña."); return; }
+    if (!configured) { errBox.innerHTML = errorBanner("Falta configurar API_URL en este archivo — ver el aviso arriba del formulario."); return; }
+    const btn = document.getElementById("btnLogin");
+    btn.disabled = true;
+    try {
+      const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "login", usuario, password }) });
+      const data = await res.json();
+      if (!data.ok) { errBox.innerHTML = errorBanner(data.error || "No se pudo iniciar sesión."); return; }
+      guardarSesion({ token: data.token, usuario: data.usuario });
+      mostrarApp();
+      iniciarApp();
+    } catch (e) {
+      errBox.innerHTML = errorBanner("No se pudo conectar con el servidor.");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById("btnLogin").addEventListener("click", intentarLogin);
+  document.getElementById("login-password").addEventListener("keydown", e => { if (e.key === "Enter") intentarLogin(); });
+  document.getElementById("login-usuario").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("login-password").focus(); });
+  document.getElementById("btnLogout").addEventListener("click", async () => {
+    try { await apiPost({ action: "logout" }); } catch (e) {}
+    mostrarLogin();
+  });
+
+  // -----------------------------------------------------------------
+  // Carga de datos + sondeo periódico (polling)
+  // -----------------------------------------------------------------
+  function setModeBadge(ok) {
+    const badge = document.getElementById("modeBadge");
+    const text = document.getElementById("modeBadgeText");
+    badge.classList.toggle("offline", !ok);
+    text.textContent = ok ? "sincronizado" : "sin conexión con la base de datos";
+  }
+
+  async function cargarSnapshot(manual) {
+    if (!configured) return;
+    try {
+      const data = await apiGet("snapshot");
+      if (!data.ok) { setModeBadge(false); return; }
+      setModeBadge(true);
+
+      const nextEquipos = {};
+      (data.equipos || []).forEach(e => nextEquipos[e.id] = e);
+      state.equipos = nextEquipos;
+
+      const nextSolicitudes = {};
+      (data.solicitudes || []).forEach(s => nextSolicitudes[s.id] = s);
+
+      if (!firstLoad) {
+        Object.values(nextSolicitudes).forEach(s => {
+          if (s.estado === "pendiente" && !prevPendingIds.has(s.id)) {
+            toast("Nueva solicitud: " + s.nombreCompleto + " pide " + tipoLabel(s.tipoEquipo) + ".", "ok");
+          }
+        });
+      }
+      firstLoad = false;
+      prevPendingIds = new Set(Object.values(nextSolicitudes).filter(s => s.estado === "pendiente").map(s => s.id));
+      state.solicitudes = nextSolicitudes;
+
+      renderBadges();
+      renderSolicitudes();
+      renderGestionar();
+      if (asg.equipo && state.equipos[asg.equipo.id]) asg.equipo = state.equipos[asg.equipo.id];
+      if (lib.equipo && state.equipos[lib.equipo.id]) lib.equipo = state.equipos[lib.equipo.id];
+      const vistaActiva = document.querySelector(".view.active");
+      if (vistaActiva && vistaActiva.getAttribute("data-view") === "dashboard") cargarHistorial();
+    } catch (e) {
+      setModeBadge(false);
+    }
+  }
+
+  // -----------------------------------------------------------------
+  // Arranque
+  // -----------------------------------------------------------------
+  let pollTimer = null;
+  function iniciarApp() {
+    renderAsignar();
+    renderLiberar();
+    renderBadges();
+    renderSolicitudes();
+    renderGestionar();
+    cargarSnapshot(false);
+    cargarUsuarios();
+    if (pollTimer) clearInterval(pollTimer);
+    if (configured) pollTimer = setInterval(() => cargarSnapshot(false), POLL_MS);
+  }
+
+  const sesionGuardada = cargarSesionGuardada();
+  if (sesionGuardada && sesionGuardada.token) {
+    session = sesionGuardada;
+    mostrarApp();
+    iniciarApp();
+  } else {
+    mostrarLogin();
+  }
+})();
+</script>
+</body>
+</html>
