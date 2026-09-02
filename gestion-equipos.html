@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root {
     --bg: #f2f5f1; --surface: #ffffff; --surface-2: #eaf0ea; --border: #d7ddd5;
@@ -189,6 +190,15 @@
   .vizbar-value { width: 56px; flex: none; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
   .vizbar-row:hover .vizbar-fill, .vizbar-row:focus-within .vizbar-fill { filter: brightness(1.08); }
   .viz-empty { text-align: center; padding: 22px 10px; color: var(--ink-faint); font-size: 13px; }
+
+  /* Escáner de cámara (QR / código de barras) */
+  .scan-row { display: flex; gap: 8px; align-items: stretch; }
+  .scan-row input { flex: 1; }
+  .scan-icon-btn { flex: none; width: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; color: var(--ink-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .scan-icon-btn:hover { color: var(--accent-ink); border-color: var(--accent); }
+  .scan-icon-btn svg { width: 18px; height: 18px; }
+  .scanner-region { width: 100%; min-height: 260px; border-radius: 10px; overflow: hidden; background: #000; }
+  .scanner-region video { width: 100% !important; }
   .viz-tooltip { position: fixed; z-index: 70; background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: none; white-space: nowrap; }
   .viz-tooltip.show { display: block; }
 
@@ -343,7 +353,10 @@
     <button class="modal-close" id="closeModalNuevo">✕</button>
     <h3>Nuevo equipo</h3>
     <div class="modal-sub">Se agrega al inventario como disponible.</div>
-    <div class="field"><label for="ne-codigo">Código de inventario</label><input type="text" id="ne-codigo" class="mono-input" placeholder="Ej. LAP-007"></div>
+    <div class="field"><label for="ne-codigo">Código de inventario</label>
+      <div class="scan-row"><input type="text" id="ne-codigo" class="mono-input" placeholder="Ej. LAP-007">
+      <button type="button" class="scan-icon-btn" id="ne-scan-btn" title="Usar cámara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button></div>
+    </div>
     <div class="field"><label for="ne-tipo">Tipo</label><select id="ne-tipo"><option value="laptop">Laptop</option><option value="apple">Apple</option></select></div>
     <div class="field"><label for="ne-modelo">Modelo</label><input type="text" id="ne-modelo" placeholder="Ej. Dell Latitude 5420"></div>
     <div id="ne-error"></div>
@@ -373,6 +386,16 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="modalScanner">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" id="closeModalScanner">✕</button>
+    <h3>Escanear código</h3>
+    <div class="modal-sub">Apunta la cámara al código QR o de barras del equipo.</div>
+    <div class="scanner-region" id="scannerRegion"></div>
+    <div id="scannerError"></div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toastWrap"></div>
 <div class="viz-tooltip" id="vizTooltip"></div>
 
@@ -384,7 +407,7 @@
   // CONFIGURACIÓN — pega aquí la URL de tu Web App de Apps Script
   // (termina en /exec). Debe ser la MISMA que en formulario-alumno.html.
   // -----------------------------------------------------------------
-  const API_URL = "https://script.google.com/macros/s/AKfycbxER8Ru3t8kXcHCBJYuh2hQNFPBXhWS5qL6_pv_c44GoymVLQi37KRljdBLi0AsBKapKQ/exec";
+  const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
   const POLL_MS = 6000;
 
   const configured = API_URL && API_URL.indexOf("https://script.google.com/") === 0;
@@ -461,6 +484,49 @@
     setTimeout(() => el.remove(), 4200);
   }
 
+  // -----------------------------------------------------------------
+  // Escáner de cámara (QR / código de barras) — usa html5-qrcode.
+  // -----------------------------------------------------------------
+  const ICON_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  function scanBtnHtml(id, full) {
+    return '<button type="button" class="btn btn-ghost' + (full ? " btn-full" : "") + '" id="' + id + '" style="margin-top:10px;">' + ICON_CAMERA + 'Usar cámara</button>';
+  }
+  const modalScanner = document.getElementById("modalScanner");
+  let scannerObj = null;
+  function abrirScanner(onResult) {
+    document.getElementById("scannerError").innerHTML = "";
+    modalScanner.classList.add("open");
+    const region = document.getElementById("scannerRegion");
+    region.innerHTML = "";
+    try {
+      scannerObj = new Html5Qrcode("scannerRegion");
+      scannerObj.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        decodedText => {
+          const texto = String(decodedText || "").trim();
+          cerrarScanner();
+          if (texto) onResult(texto);
+        },
+        () => {} // fallos de lectura frame a frame — se ignoran, no son errores
+      ).catch(() => {
+        document.getElementById("scannerError").innerHTML = errorBanner("No se pudo acceder a la cámara. Revisa los permisos del navegador o escribe el código manualmente.");
+      });
+    } catch (e) {
+      document.getElementById("scannerError").innerHTML = errorBanner("Este navegador no admite escaneo por cámara. Escribe el código manualmente.");
+    }
+  }
+  function cerrarScanner() {
+    modalScanner.classList.remove("open");
+    if (scannerObj) {
+      const s = scannerObj;
+      scannerObj = null;
+      s.stop().then(() => s.clear()).catch(() => {});
+    }
+  }
+  document.getElementById("closeModalScanner").addEventListener("click", cerrarScanner);
+  modalScanner.addEventListener("click", e => { if (e.target === modalScanner) cerrarScanner(); });
+
   async function apiGet(action) {
     const token = session ? "&token=" + encodeURIComponent(session.token) : "";
     const res = await fetch(API_URL + "?action=" + encodeURIComponent(action) + token, { cache: "no-store" });
@@ -508,13 +574,17 @@
     const icon = s.tipoEquipo === "apple"
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/></svg>';
+    const equipoActual = s.equipoAsignado ? state.equipos[s.equipoAsignado] : null;
+    const puedeLiberar = attended && equipoActual && equipoActual.estado === "prestado";
     return '<div class="ticket ' + (attended ? "attended" : "") + '" data-id="' + escapeHtml(s.id) + '">' +
       '<span class="t-type">' + icon + '</span>' +
       '<div class="t-main"><div class="t-name">' + escapeHtml(s.nombreCompleto) + ' <span style="font-weight:500;color:var(--ink-faint);">— ' + tipoLabel(s.tipoEquipo) + '</span></div>' +
       '<div class="t-sub">' + escapeHtml(s.correo) + ' &middot; ' + escapeHtml(s.facultad) + '</div></div>' +
       '<div class="t-when">' + fmtRelative(s.creadoEn) + '</div>' +
       (attended
-        ? '<span class="t-badge">' + (s.equipoAsignado ? "Asignado " + escapeHtml(s.equipoAsignado) : "Atendida") + '</span>'
+        ? '<div class="t-actions"><span class="t-badge">' + (s.equipoAsignado ? "Asignado " + escapeHtml(s.equipoAsignado) : "Atendida") + '</span>' +
+          (puedeLiberar ? '<button class="btn btn-ghost" data-liberar-sol="' + escapeHtml(s.equipoAsignado) + '" style="padding:6px 12px;font-size:12.5px;">Liberar</button>' : '') +
+          '</div>'
         : '<div class="t-actions"><button class="btn btn-primary" data-atender="' + escapeHtml(s.id) + '">Atender</button></div>') +
       '</div>';
   }
@@ -529,6 +599,14 @@
     qa.innerHTML = atendidas.length ? atendidas.map(ticketHtml).join("")
       : '<div class="empty" style="padding:20px;"><div class="t">Todavía no se atendió ninguna</div></div>';
     qp.querySelectorAll("[data-atender]").forEach(b => b.addEventListener("click", () => abrirAtender(b.getAttribute("data-atender"))));
+    qa.querySelectorAll("[data-liberar-sol]").forEach(b => b.addEventListener("click", () => liberarDesdeSolicitud(b.getAttribute("data-liberar-sol"))));
+  }
+  async function liberarDesdeSolicitud(codigo) {
+    if (!confirm('¿Liberar el equipo ' + codigo + '? Solo hazlo si ya está físicamente de vuelta en la sala.')) return;
+    const data = await apiPost({ action: "liberarEquipo", codigo: codigo });
+    if (!data.ok) { toast(data.error || "No se pudo liberar el equipo.", "err"); return; }
+    toast(codigo + " liberado — vuelve a estar disponible.", "ok");
+    cargarSnapshot(true);
   }
 
   const modalAtender = document.getElementById("modalAtender");
@@ -540,7 +618,8 @@
     document.getElementById("atenderQuien").textContent = s.nombreCompleto + " · " + s.correo + " · " + s.facultad + " · pide " + tipoLabel(s.tipoEquipo);
     document.getElementById("atenderBody").innerHTML =
       '<div class="field"><label for="at-codigo">Código de inventario del equipo a entregar</label>' +
-      '<input type="text" id="at-codigo" class="mono-input scaninput" placeholder="Escanea o escribe el código" style="text-align:left;" autocomplete="off"></div>' +
+      '<div class="scan-row"><input type="text" id="at-codigo" class="mono-input scaninput" placeholder="Escanea o escribe el código" style="text-align:left;" autocomplete="off">' +
+      '<button type="button" class="scan-icon-btn" id="at-scan-btn" title="Usar cámara">' + ICON_CAMERA + '</button></div></div>' +
       '<div id="at-error"></div>' +
       '<button class="btn btn-primary btn-full" id="at-confirmar">Confirmar entrega</button>';
     modalAtender.classList.add("open");
@@ -548,6 +627,10 @@
     setTimeout(() => input.focus(), 30);
     input.addEventListener("keydown", e => { if (e.key === "Enter") confirmarAtencion(); });
     document.getElementById("at-confirmar").addEventListener("click", confirmarAtencion);
+    document.getElementById("at-scan-btn").addEventListener("click", () => abrirScanner(texto => {
+      document.getElementById("at-codigo").value = texto;
+      confirmarAtencion();
+    }));
   }
   async function confirmarAtencion() {
     const codigo = normCode(document.getElementById("at-codigo").value);
@@ -590,10 +673,15 @@
       body.innerHTML =
         '<div class="scanbox"><svg class="scanicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>' +
         '<div class="instr">Escanea el código del equipo</div><div class="instr-sub">o escríbelo y presiona Enter</div>' +
-        '<input type="text" class="scaninput mono-input" id="asg-codigo" placeholder="Código de inventario" autocomplete="off"><div id="asg-error"></div></div>';
+        '<input type="text" class="scaninput mono-input" id="asg-codigo" placeholder="Código de inventario" autocomplete="off">' +
+        scanBtnHtml("asg-scan-btn", true) + '<div id="asg-error"></div></div>';
       const input = document.getElementById("asg-codigo");
       setTimeout(() => input.focus(), 30);
       input.addEventListener("keydown", e => { if (e.key === "Enter") asgLeerCodigo(); });
+      document.getElementById("asg-scan-btn").addEventListener("click", () => abrirScanner(texto => {
+        document.getElementById("asg-codigo").value = texto;
+        asgLeerCodigo();
+      }));
     } else if (asg.step === 2) {
       body.innerHTML =
         '<div class="resultcard" style="margin-bottom:18px;"><div class="rc-code">' + escapeHtml(asg.equipo.id) + '</div>' +
@@ -664,10 +752,15 @@
       body.innerHTML =
         '<div class="scanbox"><svg class="scanicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>' +
         '<div class="instr">Escanea el código del equipo que retorna</div><div class="instr-sub">o escríbelo y presiona Enter</div>' +
-        '<input type="text" class="scaninput mono-input" id="lib-codigo" placeholder="Código de inventario" autocomplete="off"><div id="lib-error"></div></div>';
+        '<input type="text" class="scaninput mono-input" id="lib-codigo" placeholder="Código de inventario" autocomplete="off">' +
+        scanBtnHtml("lib-scan-btn", true) + '<div id="lib-error"></div></div>';
       const input = document.getElementById("lib-codigo");
       setTimeout(() => input.focus(), 30);
       input.addEventListener("keydown", e => { if (e.key === "Enter") libLeerCodigo(); });
+      document.getElementById("lib-scan-btn").addEventListener("click", () => abrirScanner(texto => {
+        document.getElementById("lib-codigo").value = texto;
+        libLeerCodigo();
+      }));
     } else {
       const eq = lib.equipo;
       const a = eq.prestadoA || {};
@@ -767,6 +860,9 @@
   });
   document.getElementById("closeModalNuevo").addEventListener("click", () => modalNuevo.classList.remove("open"));
   modalNuevo.addEventListener("click", e => { if (e.target === modalNuevo) modalNuevo.classList.remove("open"); });
+  document.getElementById("ne-scan-btn").addEventListener("click", () => abrirScanner(texto => {
+    document.getElementById("ne-codigo").value = normCode(texto);
+  }));
   document.getElementById("btnGuardarNuevo").addEventListener("click", async () => {
     const codigo = normCode(document.getElementById("ne-codigo").value);
     const tipo = document.getElementById("ne-tipo").value;
