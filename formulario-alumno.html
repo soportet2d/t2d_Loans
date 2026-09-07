@@ -96,7 +96,7 @@
       <div class="field">
         <label for="f-correo">Correo UP</label>
         <input type="email" id="f-correo" placeholder="nombre.apellido@up.edu.pe" autocomplete="email">
-        <div class="hint">Debe terminar en @up.edu.pe</div>
+        <div class="hint">Debe terminar en @up.edu.pe o @alum.up.edu.pe</div>
       </div>
       <div class="field">
         <label for="f-facultad">Facultad</label>
@@ -147,7 +147,7 @@
   // CONFIGURACIÓN — pega aquí la URL de tu Web App de Apps Script
   // (termina en /exec). Ver Code.gs para cómo obtenerla.
   // -----------------------------------------------------------------
-  const API_URL = "https://script.google.com/macros/s/AKfycbxxF1T9xItaYLIjuBNzU_ODksfTILY_R32pWOIhlpL7aug0pFDN9hMO1Ted-l9ya0P_mg/exec";
+  const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
   const configured = API_URL && API_URL.indexOf("https://script.google.com/") === 0;
   if (!configured) {
@@ -160,7 +160,7 @@
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function validCorreoUP(v) { return /^[^\s@]+@up\.edu\.pe$/i.test(String(v || "").trim()); }
+  function validCorreoUP(v) { return /^[^\s@]+@(alum\.)?up\.edu\.pe$/i.test(String(v || "").trim()); }
   function tipoLabel(t) { return t === "apple" ? "Apple" : "Laptop"; }
   function errBanner(msg) {
     return '<div class="banner err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg><span>' + escapeHtml(msg) + '</span></div>';
@@ -211,7 +211,7 @@
 
     const problems = [];
     if (!nombre) problems.push("Ingresa tu nombre completo.");
-    if (!validCorreoUP(correo)) problems.push("Ingresa un correo UP válido (debe terminar en @up.edu.pe).");
+    if (!validCorreoUP(correo)) problems.push("Ingresa un correo UP válido (debe terminar en @up.edu.pe o @alum.up.edu.pe).");
     if (!facultad) problems.push("Ingresa tu facultad.");
     if (!tipoEl) problems.push("Selecciona qué equipo necesitas.");
     if (problems.length) { errBox.innerHTML = errBanner(problems.join(" ")); return; }

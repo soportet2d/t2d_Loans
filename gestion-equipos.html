@@ -190,6 +190,27 @@
   .vizbar-value { width: 56px; flex: none; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
   .vizbar-row:hover .vizbar-fill, .vizbar-row:focus-within .vizbar-fill { filter: brightness(1.08); }
   .viz-empty { text-align: center; padding: 22px 10px; color: var(--ink-faint); font-size: 13px; }
+  /* Gráfico de barras apiladas por día (Reporte) */
+  .daily-chart { display: flex; align-items: flex-end; gap: 5px; min-height: 190px; padding: 22px 2px 0; overflow-x: auto; }
+  .daily-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; flex: 1 0 20px; min-width: 20px; max-width: 46px; height: 100%; border: none; background: none; padding: 0; cursor: default; font-family: inherit; }
+  .daily-col .daily-total { font-size: 10.5px; font-weight: 700; color: var(--ink-muted); font-variant-numeric: tabular-nums; margin-bottom: 3px; min-height: 13px; }
+  .daily-col .daily-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+  .daily-col .daily-seg { width: 100%; }
+  /* Apple siempre queda arriba (dato expuesto) cuando hay ambos tipos ese día — se
+     redondea su punta. Laptop va abajo, pegado a la línea base (sin redondear),
+     salvo que sea el único segmento del día (":only-child"), donde también expone
+     su punta. Separación entre segmentos apilados: 2px de "gap" (nunca borde). */
+  .daily-col .daily-seg.apple { background: var(--cat-2); border-radius: 4px 4px 0 0; }
+  .daily-col .daily-seg.laptop { background: var(--cat-1); }
+  .daily-col .daily-seg.laptop:only-child { border-radius: 4px 4px 0 0; }
+  .daily-col .daily-gap { height: 2px; flex: none; }
+  .daily-col .daily-date { font-size: 9.5px; color: var(--ink-faint); margin-top: 6px; white-space: nowrap; transform: rotate(-40deg); transform-origin: top center; }
+  .daily-col:hover .daily-seg, .daily-col:focus-visible .daily-seg { filter: brightness(1.08); }
+  .viz-table-toggle { background: none; border: none; color: var(--accent-ink); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; margin-top: 12px; font-family: inherit; }
+  .viz-table { margin-top: 10px; width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .viz-table th, .viz-table td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  .viz-table th:first-child, .viz-table td:first-child { text-align: left; }
+  .viz-table th { color: var(--ink-faint); font-weight: 600; }
 
   /* Escáner de cámara (QR / código de barras) */
   .scan-row { display: flex; gap: 8px; align-items: stretch; }
@@ -268,6 +289,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
       Dashboard
     </button>
+    <button class="tab" data-view="reporte">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 13v4M12 9v8M16 12v5"/></svg>
+      Reporte
+    </button>
     <button class="tab" data-view="usuarios">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Usuarios
@@ -330,6 +355,18 @@
       </div>
     </div>
     <div id="dashBody"></div>
+  </section>
+
+  <section class="view viz-root" data-view="reporte" id="view-reporte">
+    <div class="panel-head" style="margin-bottom:16px;">
+      <div><h2 style="font-size:20px;">Reporte</h2><p class="desc">Cómo va el servicio, día a día.</p></div>
+      <div class="segmented" id="repPeriodo">
+        <button data-periodo="14" class="active" type="button">14 días</button>
+        <button data-periodo="30" type="button">30 días</button>
+        <button data-periodo="90" type="button">90 días</button>
+      </div>
+    </div>
+    <div id="repBody"></div>
   </section>
 
   <section class="view" data-view="usuarios" id="view-usuarios">
@@ -407,7 +444,7 @@
   // CONFIGURACIÓN — pega aquí la URL de tu Web App de Apps Script
   // (termina en /exec). Debe ser la MISMA que en formulario-alumno.html.
   // -----------------------------------------------------------------
-  const API_URL = "https://script.google.com/macros/s/AKfycbxxF1T9xItaYLIjuBNzU_ODksfTILY_R32pWOIhlpL7aug0pFDN9hMO1Ted-l9ya0P_mg/exec";
+  const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
   const POLL_MS = 6000;
 
   const configured = API_URL && API_URL.indexOf("https://script.google.com/") === 0;
@@ -421,6 +458,7 @@
 
   const state = { equipos: {}, solicitudes: {}, usuarios: [], historial: [] };
   let dashPeriodo = "todo"; // "7" | "30" | "todo"
+  let repPeriodo = "14"; // "14" | "30" | "90"
   let prevPendingIds = new Set();
   let firstLoad = true;
 
@@ -467,7 +505,7 @@
   function tipoLabel(t) { return t === "apple" ? "Apple" : "Laptop"; }
   function estadoLabel(e) { return { disponible: "Disponible", prestado: "Prestado", mantenimiento: "Mantenimiento", baja: "De baja" }[e] || e; }
   function normCode(s) { return String(s || "").trim().toUpperCase(); }
-  function validCorreoUP(v) { return /^[^\s@]+@up\.edu\.pe$/i.test(String(v || "").trim()); }
+  function validCorreoUP(v) { return /^[^\s@]+@(alum\.)?up\.edu\.pe$/i.test(String(v || "").trim()); }
   function errorBanner(msg) { return '<div class="banner err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg><span>' + escapeHtml(msg) + '</span></div>'; }
   function equiposList() { return Object.values(state.equipos).sort((a, b) => (a.id < b.id ? -1 : 1)); }
   function solicitudesList() { return Object.values(state.solicitudes).sort((a, b) => (a.creadoEn < b.creadoEn ? 1 : -1)); }
@@ -561,6 +599,7 @@
     document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.getAttribute("data-view") === name));
     if (name === "usuarios") cargarUsuarios();
     if (name === "dashboard") cargarHistorial();
+    if (name === "reporte") cargarHistorial();
   }
   document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showView(t.getAttribute("data-view"))));
   document.getElementById("bellBtn").addEventListener("click", () => showView("solicitudes"));
@@ -571,21 +610,22 @@
   // -----------------------------------------------------------------
   function ticketHtml(s) {
     const attended = s.estado !== "pendiente";
+    const cancelada = s.estado === "cancelada";
     const icon = s.tipoEquipo === "apple"
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/></svg>';
-    const equipoActual = s.equipoAsignado ? state.equipos[s.equipoAsignado] : null;
-    const puedeLiberar = attended && equipoActual && equipoActual.estado === "prestado";
+    const badge = cancelada
+      ? '<span class="t-badge" style="color:var(--neutral-pill);background:var(--neutral-pill-soft);">Cancelada</span>'
+      : '<span class="t-badge">' + (s.equipoAsignado ? "Asignado " + escapeHtml(s.equipoAsignado) : "Atendida") + '</span>';
     return '<div class="ticket ' + (attended ? "attended" : "") + '" data-id="' + escapeHtml(s.id) + '">' +
       '<span class="t-type">' + icon + '</span>' +
       '<div class="t-main"><div class="t-name">' + escapeHtml(s.nombreCompleto) + ' <span style="font-weight:500;color:var(--ink-faint);">— ' + tipoLabel(s.tipoEquipo) + '</span></div>' +
       '<div class="t-sub">' + escapeHtml(s.correo) + ' &middot; ' + escapeHtml(s.facultad) + '</div></div>' +
       '<div class="t-when">' + fmtRelative(s.creadoEn) + '</div>' +
       (attended
-        ? '<div class="t-actions"><span class="t-badge">' + (s.equipoAsignado ? "Asignado " + escapeHtml(s.equipoAsignado) : "Atendida") + '</span>' +
-          (puedeLiberar ? '<button class="btn btn-ghost" data-liberar-sol="' + escapeHtml(s.equipoAsignado) + '" style="padding:6px 12px;font-size:12.5px;">Liberar</button>' : '') +
-          '</div>'
-        : '<div class="t-actions"><button class="btn btn-primary" data-atender="' + escapeHtml(s.id) + '">Atender</button></div>') +
+        ? '<div class="t-actions">' + badge + '</div>'
+        : '<div class="t-actions"><button class="btn btn-primary" data-atender="' + escapeHtml(s.id) + '">Atender</button>' +
+          '<button class="btn btn-ghost" data-cancelar-sol="' + escapeHtml(s.id) + '" style="padding:6px 12px;font-size:12.5px;" title="El alumno ya no quiere el equipo">Liberar</button></div>') +
       '</div>';
   }
   function renderSolicitudes() {
@@ -599,7 +639,14 @@
     qa.innerHTML = atendidas.length ? atendidas.map(ticketHtml).join("")
       : '<div class="empty" style="padding:20px;"><div class="t">Todavía no se atendió ninguna</div></div>';
     qp.querySelectorAll("[data-atender]").forEach(b => b.addEventListener("click", () => abrirAtender(b.getAttribute("data-atender"))));
-    qa.querySelectorAll("[data-liberar-sol]").forEach(b => b.addEventListener("click", () => liberarDesdeSolicitud(b.getAttribute("data-liberar-sol"))));
+    qp.querySelectorAll("[data-cancelar-sol]").forEach(b => b.addEventListener("click", () => cancelarSolicitudUI(b.getAttribute("data-cancelar-sol"))));
+  }
+  async function cancelarSolicitudUI(id) {
+    if (!confirm('¿Liberar esta solicitud? Úsalo cuando el alumno ya no quiere el equipo — la solicitud pasa a "Cancelada" y deja de estar pendiente.')) return;
+    const data = await apiPost({ action: "cancelarSolicitud", solicitudId: id });
+    if (!data.ok) { toast(data.error || "No se pudo cancelar la solicitud.", "err"); return; }
+    toast("Solicitud liberada.", "ok");
+    cargarSnapshot(true);
   }
   async function liberarDesdeSolicitud(codigo) {
     if (!confirm('¿Liberar el equipo ' + codigo + '? Solo hazlo si ya está físicamente de vuelta en la sala.')) return;
@@ -731,7 +778,7 @@
     const facultad = document.getElementById("asg-a-facultad").value.trim();
     const errBox = document.getElementById("asg-error2");
     if (!nombre || !facultad) { errBox.innerHTML = errorBanner("Completa el nombre y la facultad del alumno."); return; }
-    if (!validCorreoUP(correo)) { errBox.innerHTML = errorBanner("Ingresa un correo UP válido (debe terminar en @up.edu.pe)."); return; }
+    if (!validCorreoUP(correo)) { errBox.innerHTML = errorBanner("Ingresa un correo UP válido (debe terminar en @up.edu.pe o @alum.up.edu.pe)."); return; }
     asg.alumno = { nombre, correo, facultad };
     asg.step = 3; renderAsignar();
   }
@@ -918,6 +965,7 @@
     if (!data.ok) return;
     state.historial = data.historial || [];
     renderDashboard();
+    renderReporte();
   }
 
   document.querySelectorAll("#dashPeriodo button").forEach(b => {
@@ -925,6 +973,13 @@
       dashPeriodo = b.getAttribute("data-periodo");
       document.querySelectorAll("#dashPeriodo button").forEach(x => x.classList.toggle("active", x === b));
       renderDashboard();
+    });
+  });
+  document.querySelectorAll("#repPeriodo button").forEach(b => {
+    b.addEventListener("click", () => {
+      repPeriodo = b.getAttribute("data-periodo");
+      document.querySelectorAll("#repPeriodo button").forEach(x => x.classList.toggle("active", x === b));
+      renderReporte();
     });
   });
 
@@ -1075,6 +1130,150 @@
   }
 
   // -----------------------------------------------------------------
+  // Reporte (préstamos diarios por tipo + salud del servicio)
+  // -----------------------------------------------------------------
+  const TIEMPO_MAXIMO_HORAS_REP = 3; // debe coincidir con TIEMPO_MAXIMO_HORAS en Code.gs
+  function fechaKey(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function fechaCorta(d) { return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" }); }
+  function historialEnRangoRep() {
+    const dias = Number(repPeriodo);
+    const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
+    return state.historial.filter(h => h.asignadoEn && new Date(h.asignadoEn).getTime() >= desde);
+  }
+  function solicitudesEnRangoRep() {
+    const dias = Number(repPeriodo);
+    const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
+    return solicitudesList().filter(s => s.creadoEn && new Date(s.creadoEn).getTime() >= desde);
+  }
+
+  // Igual que vizBarRows, pero cada fila trae su propio color (para colores de
+  // estado — bueno/pendiente/neutro — en vez de una sola serie).
+  function vizStatusRows(rows) {
+    const visibles = rows.filter(r => r.value > 0);
+    if (!visibles.length) return '<div class="viz-empty">Sin datos todavía.</div>';
+    const max = Math.max.apply(null, visibles.map(r => r.value)) || 1;
+    return visibles.map(r => {
+      const pct = Math.max((r.value / max) * 100, 2);
+      const label = escapeHtml(r.label);
+      return '<div class="vizbar-row" tabindex="0" data-tip="' + label + ': ' + r.value + '">' +
+        '<span class="vizbar-label" title="' + label + '">' + label + '</span>' +
+        '<span class="vizbar-track"><span class="vizbar-fill" style="width:' + pct.toFixed(1) + '%; background:' + r.color + ';"></span></span>' +
+        '<span class="vizbar-value">' + r.value + '</span></div>';
+    }).join("");
+  }
+
+  // Barras apiladas por día (Laptop abajo, Apple arriba) para los últimos N días
+  // del periodo elegido, más una tabla equivalente (oculta por defecto) para
+  // que los mismos datos sean accesibles sin depender del color/posición.
+  function dailyChartHtml(dias) {
+    const hoy = new Date();
+    const buckets = [];
+    for (let i = dias - 1; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+      buckets.push({ key: fechaKey(d), label: fechaCorta(d), laptop: 0, apple: 0 });
+    }
+    const byKey = {};
+    buckets.forEach(b => { byKey[b.key] = b; });
+    historialEnRangoRep().forEach(h => {
+      const b = byKey[fechaKey(new Date(h.asignadoEn))];
+      if (!b) return;
+      if (h.tipo === "apple") b.apple++; else b.laptop++;
+    });
+    const maxTotal = Math.max.apply(null, buckets.map(b => b.laptop + b.apple)) || 1;
+    const maxAltura = 130; // px, alto máximo de la barra apilada más grande
+    const cols = buckets.map(b => {
+      const total = b.laptop + b.apple;
+      const alturaLaptop = total ? Math.max(Math.round((b.laptop / maxTotal) * maxAltura), b.laptop ? 3 : 0) : 0;
+      const alturaApple = total ? Math.max(Math.round((b.apple / maxTotal) * maxAltura), b.apple ? 3 : 0) : 0;
+      const tip = b.label + ": " + total + " préstamo" + (total === 1 ? "" : "s") +
+        (total ? " (" + b.laptop + " laptop, " + b.apple + " Apple)" : "");
+      return '<div class="daily-col" tabindex="0" data-tip="' + escapeHtml(tip) + '">' +
+        '<div class="daily-total">' + (total || "") + '</div>' +
+        '<div class="daily-stack" style="height:' + maxAltura + 'px;">' +
+          (alturaApple > 0 ? '<div class="daily-seg apple" style="height:' + alturaApple + 'px;"></div>' : "") +
+          (alturaApple > 0 && alturaLaptop > 0 ? '<div class="daily-gap"></div>' : "") +
+          (alturaLaptop > 0 ? '<div class="daily-seg laptop" style="height:' + alturaLaptop + 'px;"></div>' : "") +
+        '</div>' +
+        '<div class="daily-date">' + b.label + '</div>' +
+      '</div>';
+    }).join("");
+    const filas = buckets.map(b =>
+      '<tr><td>' + b.label + '</td><td>' + b.laptop + '</td><td>' + b.apple + '</td><td>' + (b.laptop + b.apple) + '</td></tr>'
+    ).join("");
+    const tabla = '<table class="viz-table" id="repDailyTable" hidden><thead><tr><th>Día</th><th>Laptop</th><th>Apple</th><th>Total</th></tr></thead><tbody>' + filas + '</tbody></table>';
+    return '<div class="daily-chart">' + cols + '</div>' +
+      '<button type="button" class="viz-table-toggle" id="repDailyToggle">Ver como tabla</button>' + tabla;
+  }
+
+  function renderReporte() {
+    const body = document.getElementById("repBody");
+    if (!state.historial.length && !solicitudesList().length) {
+      body.innerHTML = '<div class="panel"><div class="viz-empty">Todavía no hay préstamos registrados — este reporte se llena a medida que se atienden solicitudes y se asignan equipos.</div></div>';
+      return;
+    }
+    const dias = Number(repPeriodo);
+    const histPeriodo = historialEnRangoRep();
+    const solsPeriodo = solicitudesEnRangoRep();
+    const solsTodas = solicitudesList();
+
+    const hoyKey = fechaKey(new Date());
+    const prestamosHoy = state.historial.filter(h => h.asignadoEn && fechaKey(new Date(h.asignadoEn)) === hoyKey).length;
+
+    const equiposUtiles = equiposList().filter(e => e.estado !== "baja");
+    const equiposPrestados = equiposUtiles.filter(e => e.estado === "prestado").length;
+    const utilizacion = equiposUtiles.length ? Math.round((equiposPrestados / equiposUtiles.length) * 100) : null;
+
+    const cerrados = histPeriodo.filter(h => h.devueltoEn);
+    const aTiempo = cerrados.filter(h => (new Date(h.devueltoEn) - new Date(h.asignadoEn)) / 3600000 <= TIEMPO_MAXIMO_HORAS_REP).length;
+    const pctATiempo = cerrados.length ? Math.round((aTiempo / cerrados.length) * 100) : null;
+
+    const canceladasPeriodo = solsPeriodo.filter(s => s.estado === "cancelada").length;
+    const pctCanceladas = solsPeriodo.length ? Math.round((canceladasPeriodo / solsPeriodo.length) * 100) : null;
+
+    const estadoCounts = {
+      pendiente: solsTodas.filter(s => s.estado === "pendiente").length,
+      atendida: solsTodas.filter(s => s.estado === "atendida").length,
+      cancelada: solsTodas.filter(s => s.estado === "cancelada").length,
+    };
+
+    body.innerHTML =
+      '<div class="stats" style="grid-template-columns:repeat(4,1fr);">' +
+        '<div class="stat accent"><div class="n">' + prestamosHoy + '</div><div class="l">Préstamos hoy</div></div>' +
+        '<div class="stat' + (utilizacion != null && utilizacion >= 80 ? " warn" : "") + '"><div class="n">' + (utilizacion == null ? "—" : utilizacion + "%") + '</div><div class="l">Equipos en uso ahora</div></div>' +
+        '<div class="stat"><div class="n">' + (pctATiempo == null ? "—" : pctATiempo + "%") + '</div><div class="l">Devueltos a tiempo (' + TIEMPO_MAXIMO_HORAS_REP + 'h)</div></div>' +
+        '<div class="stat' + (pctCanceladas != null && pctCanceladas >= 20 ? " warn" : "") + '"><div class="n">' + (pctCanceladas == null ? "—" : pctCanceladas + "%") + '</div><div class="l">Solicitudes canceladas</div></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Préstamos por día</h3></div>' +
+        '<div class="legend-row"><span class="legend-chip"><span class="sw" style="background:var(--cat-1);"></span>Laptop</span><span class="legend-chip"><span class="sw" style="background:var(--cat-2);"></span>Apple</span></div>' +
+        '<div id="vizDiario"></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="viz-panel-head"><h3>Solicitudes por estado</h3></div>' +
+        '<div class="viz-sub">Estado actual de todas las solicitudes recibidas (no depende del rango de arriba).</div>' +
+        '<div id="vizEstadoSol"></div>' +
+      '</div>';
+
+    document.getElementById("vizDiario").innerHTML = dailyChartHtml(dias);
+    const chartScroll = document.querySelector("#vizDiario .daily-chart");
+    if (chartScroll) chartScroll.scrollLeft = chartScroll.scrollWidth; // arranca mostrando los días más recientes
+    const toggleBtn = document.getElementById("repDailyToggle");
+    const tabla = document.getElementById("repDailyTable");
+    if (toggleBtn && tabla) {
+      toggleBtn.addEventListener("click", () => {
+        tabla.hidden = !tabla.hidden;
+        toggleBtn.textContent = tabla.hidden ? "Ver como tabla" : "Ocultar tabla";
+      });
+    }
+    document.getElementById("vizEstadoSol").innerHTML = vizStatusRows([
+      { label: "Atendidas", value: estadoCounts.atendida, color: "var(--good)" },
+      { label: "Pendientes", value: estadoCounts.pendiente, color: "var(--warning)" },
+      { label: "Canceladas", value: estadoCounts.cancelada, color: "var(--neutral-pill)" },
+    ]);
+    wireVizTooltips(body);
+  }
+
+  // -----------------------------------------------------------------
   // Usuarios (gestión de acceso al panel)
   // -----------------------------------------------------------------
   function renderUsuarios() {
@@ -1216,7 +1415,8 @@
       if (asg.equipo && state.equipos[asg.equipo.id]) asg.equipo = state.equipos[asg.equipo.id];
       if (lib.equipo && state.equipos[lib.equipo.id]) lib.equipo = state.equipos[lib.equipo.id];
       const vistaActiva = document.querySelector(".view.active");
-      if (vistaActiva && vistaActiva.getAttribute("data-view") === "dashboard") cargarHistorial();
+      const nombreVista = vistaActiva && vistaActiva.getAttribute("data-view");
+      if (nombreVista === "dashboard" || nombreVista === "reporte") cargarHistorial();
     } catch (e) {
       setModeBadge(false);
     }
